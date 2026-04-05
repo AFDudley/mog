@@ -679,11 +679,11 @@ fn unknown_between_valid_tokens() {
 }
 
 #[test]
-fn exclamation_without_equal_is_unknown() {
-    // "!" alone should be Unknown (since != is handled separately)
+fn exclamation_without_equal_is_not() {
+    // "!" alone is the unary Not operator
     let tokens = tokenize("!");
-    // The lexer checks "!=" first; lone "!" falls through to unknown
-    assert_eq!(tokens[0].token_type, TokenType::Unknown);
+    assert_eq!(tokens[0].token_type, TokenType::Not);
+    assert_eq!(tokens[0].value, "!");
 }
 
 // ==========================================================================
