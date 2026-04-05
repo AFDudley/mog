@@ -85,7 +85,7 @@ fn decode_escape_sequences(s: &str) -> String {
 // ---------------------------------------------------------------------------
 
 fn is_associative_op(op: &str) -> bool {
-    matches!(op, "+" | "*" | "&&" | "||" | "&" | "|")
+    matches!(op, "+" | "*" | "&&" | "||" | "and" | "or" | "&" | "|")
 }
 
 fn is_binary_op_token(tt: TokenType, value: &str) -> bool {
@@ -2003,7 +2003,6 @@ impl<'a> Parser<'a> {
 
         // - ! not ~
         if self.match_token(TokenType::Minus)
-            || self.match_token(TokenType::NotEqual) && self.previous().value == "!"
             || self.match_token(TokenType::Not)
             || self.match_token(TokenType::BitwiseNot)
         {
@@ -3650,5 +3649,40 @@ mod tests {
         } else {
             panic!("expected ExpressionStatement");
         }
+    }
+
+    // Regression: `or`/`and` keyword chaining must not panic
+    #[test]
+    fn test_or_and_keyword_chaining() {
+        // `or` and `and` are aliases for `||` and `&&` and must be associative
+        let program = parse_src(
+            "fn main() -> int { a := true; b := false; c := true; \
+             if (a or b or c) { println(\"yes\"); } \
+             if (a and b and c) { println(\"all\"); } \
+             return 0; }",
+        );
+        let stmts = program_stmts(&program);
+        assert!(!stmts.is_empty());
+    }
+
+    // Regression: standalone `!` (bang) must lex as Not and parse as unary
+    #[test]
+    fn test_bang_unary_operator() {
+        let program = parse_src(
+            "fn main() -> int { ok1 := true; if (!ok1) { println(\"not ok\"); } return 0; }",
+        );
+        let stmts = program_stmts(&program);
+        assert!(!stmts.is_empty());
+    }
+
+    // Regression: combined `!` with `or`/`and` chaining
+    #[test]
+    fn test_bang_with_or_and_chaining() {
+        let program = parse_src(
+            "fn main() -> int { a := true; b := false; \
+             if (!a or !b) { println(\"mixed\"); } return 0; }",
+        );
+        let stmts = program_stmts(&program);
+        assert!(!stmts.is_empty());
     }
 }

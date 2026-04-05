@@ -136,6 +136,8 @@ impl TokenType {
             "cast" => Some(TokenType::Cast),
             "as" => Some(TokenType::As),
             "not" => Some(TokenType::Not),
+            "and" => Some(TokenType::LogicalAnd),
+            "or" => Some(TokenType::LogicalOr),
             "struct" => Some(TokenType::Struct),
             "soa" => Some(TokenType::Soa),
             "requires" => Some(TokenType::Requires),

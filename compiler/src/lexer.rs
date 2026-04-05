@@ -443,6 +443,12 @@ impl<'a> Lexer<'a> {
                 tokens.push(self.make_token(TokenType::NotEqual, "!=".into(), start_pos));
                 continue;
             }
+            // standalone !
+            if ch == b'!' {
+                self.advance(1);
+                tokens.push(self.make_token(TokenType::Not, "!".into(), start_pos));
+                continue;
+            }
             // ==
             if ch == b'=' && self.peek_at(1) == b'=' {
                 self.advance(2);
@@ -723,6 +729,8 @@ impl<'a> Lexer<'a> {
         try_kw!("cast", TokenType::Cast);
         try_kw!("as", TokenType::As);
         try_kw!("not", TokenType::Not);
+        try_kw!("and", TokenType::LogicalAnd);
+        try_kw!("or", TokenType::LogicalOr);
         try_kw!("struct", TokenType::Struct);
         try_kw!("soa", TokenType::Soa);
         try_kw!("requires", TokenType::Requires);
@@ -1326,5 +1334,40 @@ mod tests {
         let tokens = tokenize("i32[][]");
         assert_eq!(tokens[0].token_type, TokenType::TypeToken);
         assert_eq!(tokens[0].value, "i32[][]");
+    }
+
+    // Regression: standalone `!` must lex as Not, not be swallowed by `!=` handling
+    #[test]
+    fn test_bang_standalone() {
+        let tokens = tokenize("!x");
+        assert_eq!(tokens[0].token_type, TokenType::Not);
+        assert_eq!(tokens[0].value, "!");
+        assert_eq!(tokens[1].token_type, TokenType::Identifier);
+        assert_eq!(tokens[1].value, "x");
+    }
+
+    #[test]
+    fn test_bang_vs_not_equal() {
+        // `!=` should still lex as NotEqual
+        let tokens: Vec<_> = tokenize("!= !")
+            .into_iter()
+            .filter(|t| t.token_type != TokenType::Whitespace)
+            .collect();
+        assert_eq!(tokens[0].token_type, TokenType::NotEqual);
+        assert_eq!(tokens[0].value, "!=");
+        assert_eq!(tokens[1].token_type, TokenType::Not);
+        assert_eq!(tokens[1].value, "!");
+    }
+
+    #[test]
+    fn test_and_or_keywords() {
+        let tokens: Vec<_> = tokenize("a and b or c")
+            .into_iter()
+            .filter(|t| t.token_type != TokenType::Whitespace)
+            .collect();
+        assert_eq!(tokens[1].token_type, TokenType::LogicalAnd);
+        assert_eq!(tokens[1].value, "and");
+        assert_eq!(tokens[3].token_type, TokenType::LogicalOr);
+        assert_eq!(tokens[3].value, "or");
     }
 }
